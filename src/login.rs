@@ -37,6 +37,8 @@ mod imp {
         #[template_child]
         pub next_button: TemplateChild<gtk::Button>,
         #[template_child]
+        pub proxy_button: TemplateChild<gtk::Button>,
+        #[template_child]
         pub next_stack: TemplateChild<gtk::Stack>,
         #[template_child]
         pub next_label: TemplateChild<gtk::Label>,
@@ -105,6 +107,8 @@ mod imp {
             klass.install_action("login.use-qr-code", None, move |widget, _, _| {
                 widget.request_qr_code();
             });
+            /* klass.install_action("login.proxy_button", None, move |widget, _, _| {
+            }); */
             klass.install_action(
                 "login.go-to-forgot-password-page",
                 None,

@@ -298,6 +298,11 @@ impl Window {
         }
     }
 
+    pub fn client_id(&self) -> i32 {
+        let self_ = imp::Window::from_instance(self);
+        self_.active_client_id.get()
+    }
+
     fn add_notifications(
         &self,
         notifications: Vec<types::Notification>,

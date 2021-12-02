@@ -7,6 +7,10 @@ use log::{debug, info};
 use crate::config::{APP_ID, PKGDATADIR, PROFILE, VERSION};
 use crate::PreferencesWindow;
 use crate::Window;
+// use crate::ProxyWindow;
+use crate::proxy::proxy_window::ProxyWindow;
+use crate::proxy::proxy_handle_dialog::ProxyTypes;
+use crate::proxy::proxy_handle_dialog::ProxyHandleDialog;
 
 mod imp {
     use super::*;
@@ -31,6 +35,9 @@ mod imp {
     impl ApplicationImpl for Application {
         fn activate(&self, app: &Self::Type) {
             debug!("GtkApplication<Application>::activate");
+
+            // register
+            ProxyTypes::static_type();
 
             if let Some(window) = self.window.get() {
                 let window = window.upgrade().unwrap();
@@ -109,6 +116,15 @@ impl Application {
         }));
         self.add_action(&action_quit);
 
+        // Proxy
+        let action_proxy = gio::SimpleAction::new("proxy", None);
+        action_proxy.connect_activate(clone!(@weak self as app => move |_, _| {
+            // This is needed to trigger the delete event and saving the window state
+            app.show_proxy()
+        }));
+        self.add_action(&action_proxy);
+
+
         // Preferences
         let action_preferences = gio::SimpleAction::new("preferences", None);
         action_preferences.connect_activate(clone!(@weak self as app => move |_, _| {
@@ -142,6 +158,16 @@ impl Application {
         }
     }
 
+
+    fn show_proxy(&self){
+        let proxy = ProxyWindow::new();
+        proxy.set_transient_for(Some(&self.main_window()));
+        proxy.set_modal(true);
+        let client_id =  &self.main_window().client_id();
+        proxy.create_proxy_window(client_id.clone());
+        proxy.present();
+    }
+ 
     fn show_preferences(&self) {
         let preferences = PreferencesWindow::new();
         preferences.set_transient_for(Some(&self.main_window()));
