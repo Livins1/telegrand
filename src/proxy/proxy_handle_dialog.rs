@@ -4,6 +4,7 @@ use adw::prelude::*;
 use tdgrand::{functions,types};
 use crate::utils::{do_async};
 
+use crate::proxy::proxy_window::ProxyWindow;
 
 #[derive(Debug, Eq, PartialEq, Clone, Copy, glib::GEnum, num_derive::FromPrimitive)]
 #[repr(u32)]
@@ -50,7 +51,7 @@ mod imp {
     impl ObjectSubclass for ProxyHandleDialog {
         const NAME: &'static str = "ProxyHandleDialog";
         type Type = super::ProxyHandleDialog;
-        type ParentType = adw::Window;
+        type ParentType = gtk::Widget;
         
         fn class_init(klass: &mut Self::Class) {
             Self::bind_template(klass);
@@ -96,7 +97,7 @@ mod imp {
 
 glib::wrapper! {
     pub struct ProxyHandleDialog(ObjectSubclass<imp::ProxyHandleDialog>)
-        @extends gtk::Widget, gtk::Window, adw::Window;
+        @extends gtk::Widget;
 }
 
 
@@ -162,8 +163,10 @@ impl ProxyHandleDialog {
         
 
         ) */
+        let p = self.parent().unwrap();
+        // back to main page 
+        p.dynamic_cast::<gtk::Stack>().unwrap().set_visible_child_name("main-page");
         
-
 
 
     }

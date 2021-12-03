@@ -7,13 +7,16 @@ use super::proxy_handle_dialog::ProxyHandleDialog;
 mod imp {
     use super::*;
     use adw::subclass::prelude::*;
-    use std::cell::{Cell};
-
+    use std::cell::Cell;
 
     #[derive(Debug, Default, CompositeTemplate)]
     #[template(resource = "/com/github/melix99/telegrand/ui/proxy-window.ui")]
     pub struct ProxyWindow {
         pub client_id: Cell<i32>,
+        #[template_child]
+        pub proxy_stack: TemplateChild<gtk::Stack>,
+        #[template_child]
+        pub proxy_handle_dialog: TemplateChild<ProxyHandleDialog>,
         #[template_child]
         pub proxy_enable_switch: TemplateChild<gtk::Switch>,
         #[template_child]
@@ -25,17 +28,16 @@ mod imp {
         const NAME: &'static str = "ProxyWindow";
         type Type = super::ProxyWindow;
         type ParentType = adw::PreferencesWindow;
-        
+
         /* fn new() -> Self {
             Self {
+                proxy_stack: TemplateChild::default(),
                 client_id: Cell::default(),
                 proxy_enable_switch: TemplateChild::default(),
                 proxy_add_button: TemplateChild::default(),
                 proxy_handle_dialog: TemplateChild::default(),
-
             }
         } */
-
 
         fn class_init(klass: &mut Self::Class) {
             Self::bind_template(klass)
@@ -49,6 +51,7 @@ mod imp {
     impl ObjectImpl for ProxyWindow {
         fn constructed(&self, obj: &Self::Type) {
             self.parent_constructed(obj);
+            
 
             // If the system supports color schemes, load the 'Follow system colors'
             // switch state, otherwise make that switch insensitive
@@ -101,15 +104,31 @@ impl ProxyWindow {
             // println!("Proxy enable switch: {}", switch.is_active())
         });
 
-
-        self_.proxy_add_button.connect_clicked(clone!(@weak self as app => move |_| {
-            app.show_add_proxy_dialog();
-        }));
+        self_
+            .proxy_add_button
+            .connect_clicked(clone!(@weak self as app => move |_| {
+                app.show_proxy_handle_dialog();
+            }));
     }
 
-    fn show_add_proxy_dialog(&self) {
-        let dialog = ProxyHandleDialog::new();
-        dialog.set_transient_for(Some(self));
+    fn show_proxy_handle_dialog(&self) {
+        let self_ = imp::ProxyWindow::from_instance(self);
+        /* let dialog = ProxyHandleDialog::new();
+        dialog.set_transient_for(Some(&self.transient_for().unwrap()));
         dialog.present();
+        // self.close(); */
+        // self.set_height_request(200);
+        // self.set_default_height(200);
+        self_.proxy_stack.set_visible_child_name("proxy-handle");
+        // self.set_visible(false);
+    }
+
+
+    pub fn cast_to_main_stack(&self) {
+        let self_ = imp::ProxyWindow::from_instance(self);
+        self_.proxy_stack.set_visible_child_name("main-page");
     }
 }
+
+
+
