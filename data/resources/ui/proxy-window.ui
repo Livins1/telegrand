@@ -3,7 +3,7 @@
   <template class="ProxyWindow" parent="AdwPreferencesWindow">
     <property name="title" translatable="yes">ProxyWindow</property>
     <property name="default-width">400</property>
-    <property name="default-height">100</property>
+    <!-- <property name="default-height">100</property> -->
     <child>
       <object class="GtkStack" id="proxy_stack">
         <property name="transition-type">crossfade</property>
@@ -15,16 +15,16 @@
               <object class="GtkBox">
                 <property name="orientation">vertical</property>
                 <child>
-                    <object class="AdwHeaderBar">
-                        <property name="title-widget">
-                            <object class="AdwWindowTitle">
-                                <property name="title" translatable="yes">Add Proxy</property>
-                            </object>
-                        </property>
-                        <style>
-                            <class name="flat" />
-                        </style>
-                    </object>
+                  <object class="AdwHeaderBar">
+                    <property name="title-widget">
+                      <object class="AdwWindowTitle">
+                        <property name="title" translatable="yes">Proxy</property>
+                      </object>
+                    </property>
+                    <style>
+                      <class name="flat" />
+                    </style>
+                  </object>
                 </child>
                 <child>
                   <object class="AdwPreferencesPage">
@@ -55,6 +55,15 @@
                                 <property name="valign">center</property>
                               </object>
                             </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="AdwPreferencesGroup" >
+                        <child>
+                          <object class="GtkBox" id="proxy_list">
+                            <property name="orientation">vertical</property>
                           </object>
                         </child>
                       </object>

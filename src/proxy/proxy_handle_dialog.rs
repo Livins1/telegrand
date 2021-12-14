@@ -1,24 +1,23 @@
+use crate::proxy::proxy_window::ProxyWindow;
+use crate::utils::do_async;
+use adw::prelude::*;
 use glib::clone;
 use gtk::{glib, prelude::*, subclass::prelude::*, CompositeTemplate};
-use adw::prelude::*;
-use tdgrand::{functions,types};
-use crate::utils::{do_async};
+use tdgrand::{enums, functions, types};
 
-use crate::proxy::proxy_window::ProxyWindow;
-
-#[derive(Debug, Eq, PartialEq, Clone, Copy, glib::GEnum, num_derive::FromPrimitive)]
+#[derive(Debug, Eq, PartialEq, Clone, Copy, glib::GEnum)]
 #[repr(u32)]
 #[genum(type_name = "ProxyTypes")]
 pub enum ProxyTypes {
     #[genum(name = "Socks5", nick = "socks5")]
-    Socks5 = 0,
+    Socks5,
     #[genum(name = "Http", nick = "http")]
     Http,
 }
 
 impl Default for ProxyTypes {
     fn default() -> Self {
-        Self::Socks5
+        Self::Http
     }
 }
 
@@ -26,9 +25,9 @@ mod imp {
     use super::*;
     use adw::subclass::prelude::*;
     // use once_cell::sync::{Lazy, OnceCell};
-    use std::cell::{Cell};
+    use once_cell::sync::Lazy;
+    use std::cell::Cell;
 
-    
     #[derive(Debug, Default, CompositeTemplate)]
     #[template(resource = "/com/github/melix99/telegrand/ui/proxy-handle-dialog.ui")]
     pub struct ProxyHandleDialog {
@@ -52,11 +51,11 @@ mod imp {
         const NAME: &'static str = "ProxyHandleDialog";
         type Type = super::ProxyHandleDialog;
         type ParentType = gtk::Widget;
-        
+
         fn class_init(klass: &mut Self::Class) {
             Self::bind_template(klass);
 
-            klass.install_action("proxy.save-proxy", None,move |widget,_,_| {
+            klass.install_action("proxy.save-proxy", None, move |widget, _, _| {
                 widget.add_save_proxy();
             });
         }
@@ -86,13 +85,11 @@ mod imp {
 
             obj.setup_bindings();
         }
-    
     }
 
     impl WidgetImpl for ProxyHandleDialog {}
     impl WindowImpl for ProxyHandleDialog {}
     impl AdwWindowImpl for ProxyHandleDialog {}
-
 }
 
 glib::wrapper! {
@@ -100,45 +97,56 @@ glib::wrapper! {
         @extends gtk::Widget;
 }
 
-
-fn is_non_ascii_digit(c:char) -> bool {
+fn is_non_ascii_digit(c: char) -> bool {
     !c.is_ascii_digit()
 }
-
 
 impl ProxyHandleDialog {
     pub fn new() -> Self {
         glib::Object::new(&[]).expect("Failed to create ProxyHandleDialog")
     }
 
+    pub fn set_client_id(&self, client_id: i32) {
+        let self_ = imp::ProxyHandleDialog::from_instance(self);
+        self_.client_id.set(client_id);
+    }
 
     fn setup_bindings(&self) {
-
         let self_ = imp::ProxyHandleDialog::from_instance(self);
 
         // port validator
-        self_.proxy_port_entry.connect_text_notify(clone!(@weak self as app => move |widget| {
-            println!("test");
-            let text = widget.text();
-            if text.contains(is_non_ascii_digit) {
-                widget.set_text(&text.replace(is_non_ascii_digit, ""))
-            }
-        }));
-
-        self_.proxy_types.connect_selected_item_notify(clone!(@weak self as app => move |proxy_types| {
-                if let Some(select_item) = proxy_types.selected_item() {
-                    match select_item.downcast::<adw::EnumListItem>().unwrap().nick().unwrap().as_str() 
-                    {
-                        "socks5" => {
-                            println!("socks5 selected!") },
-                        "http" => {
-                            println!("http selected!")
-                },
-                        _ => {}
-                    };
+        self_
+            .proxy_port_entry
+            .connect_text_notify(clone!(@weak self as app => move |widget| {
+                println!("test");
+                let text = widget.text();
+                if text.contains(is_non_ascii_digit) {
+                    widget.set_text(&text.replace(is_non_ascii_digit, ""))
                 }
-            })
-        );
+            }));
+    }
+
+    fn proxy_type(&self) -> enums::ProxyType {
+        let self_ = imp::ProxyHandleDialog::from_instance(self);
+        if let Some(selected_item) = self_.proxy_types.selected_item() {
+            return match selected_item
+                .downcast::<adw::EnumListItem>()
+                .unwrap()
+                .nick()
+                .unwrap()
+                .as_str()
+            {
+                "socks5" => {
+                    let mut proxy = types::ProxyTypeSocks5::default();
+                    proxy.password = "123".to_string();
+                    proxy.username = "123".to_string();
+                    enums::ProxyType::Socks5(proxy)
+                }
+                "http" => enums::ProxyType::Http(types::ProxyTypeHttp::default()),
+                _ => enums::ProxyType::Socks5(types::ProxyTypeSocks5::default()),
+            };
+        };
+        enums::ProxyType::Socks5(Default::default())
     }
 
     fn client_id(&self) -> i32 {
@@ -149,27 +157,50 @@ impl ProxyHandleDialog {
     fn add_save_proxy(&self) {
         let self_ = imp::ProxyHandleDialog::from_instance(self);
         let address = self_.proxy_address_entry.text().to_string();
-        println!("{}",address);
-        let port = self_.proxy_port_entry.text().to_string();
-        println!("{}",port);
-
+        println!("{}", address);
+        let port = self_
+            .proxy_port_entry
+            .text()
+            .to_string()
+            .parse::<i32>()
+            .unwrap();
+        let client_id = self.client_id();
         let passwd = self_.proxy_auth_username_entry.text().to_string();
-        /* do_async(
-            
+        let proxy_type = self.proxy_type();
+        do_async(
             glib::PRIORITY_DEFAULT_IDLE,
             async move {
-                functions::AddProxy::new().port(port).server(address).type
-            }
-        
-
-        ) */
+                functions::AddProxy::new()
+                    .port(port)
+                    .server(address)
+                    .r#type(proxy_type)
+                    .send(client_id)
+                    .await
+            },
+            clone!(@weak self as obj => move |result| async move {
+                let self_ = imp::ProxyHandleDialog::from_instance(&obj);
+                // obj.handle_proxy_result(result);
+            }),
+        );
         let p = self.parent().unwrap();
-        // back to main page 
-        p.dynamic_cast::<gtk::Stack>().unwrap().set_visible_child_name("main-page");
-        
-
+        // back to main page
+        p.dynamic_cast::<gtk::Stack>()
+            .unwrap()
+            .set_visible_child_name("main-page");
 
     }
+
+    // fn handle_add_proxy_result(&self) {}
+    fn handle_proxy_result<T, W: IsA<gtk::Widget>>(
+        &self,
+        result: Result<T, types::Error>,
+    ) -> Option<T> {
+        match result {
+            Err(err) => {
+                // self.handle_user_error(&err, error_label, widget_to_focus);
+                None
+            }
+            Ok(t) => Some(t),
+        }
+    }
 }
-
-

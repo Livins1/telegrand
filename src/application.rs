@@ -159,13 +159,11 @@ impl Application {
         }
     }
 
-
     fn show_proxy(&self){
-        let proxy = ProxyWindow::new();
+        let client_id =  self.main_window().client_id();
+        let proxy = ProxyWindow::new(client_id);
         proxy.set_transient_for(Some(&self.main_window()));
         proxy.set_modal(true);
-        let client_id =  &self.main_window().client_id();
-        proxy.create_proxy_window(client_id.clone());
         proxy.present();
     }
  
